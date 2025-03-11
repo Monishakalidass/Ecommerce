@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopSphere - Admin Panel</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="header-container">
+      <h1>ShopSphere Admin Panel</h1>
+      <div class="profile-section" id="profileSection">
+        <i class="fas fa-user"></i> <span id="userName"></span> | <a href="#" onclick="logout()">Logout</a>
+        <!-- Added Theme Toggle -->
+        <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="adminPanel" class="admin-panel">
+      <div class="content-with-sidebar">
+        <aside class="sidebar">
+          <h3>Categories</h3>
+          <ul>
+            <li><a href="#" onclick="filterAdminProducts('all')"><i class="fas fa-list"></i> All</a></li>
+            <li><a href="#" onclick="filterAdminProducts('electronics')"><i class="fas fa-laptop"></i> Electronics</a></li>
+            <li><a href="#" onclick="filterAdminProducts('fashion')"><i class="fas fa-tshirt"></i> Fashion</a></li>
+            <li><a href="#" onclick="filterAdminProducts('furniture')"><i class="fas fa-couch"></i> Furniture</a></li>
+            <li><a href="#" onclick="filterAdminProducts('cosmetics')"><i class="fas fa-paint-roller"></i> Cosmetics</a></li>
+            <li><a href="#" onclick="filterAdminProducts('foodAndHealth')"><i class="fas fa-apple-alt"></i> Food & Health</a></li>
+          </ul>
+          <h3>Analytics</h3>
+          <ul>
+            <li><a href="#" onclick="showAnalytics('products')"><i class="fas fa-chart-bar"></i> Product Analytics</a></li>
+            <li><a href="#" onclick="showAnalytics('users')"><i class="fas fa-users"></i> User List</a></li>
+            <li><a href="#" onclick="showAnalytics('cost')"><i class="fas fa-dollar-sign"></i> Cost Estimation</a></li>
+            <li><a href="#" onclick="showAnalytics('inventory')"><i class="fas fa-warehouse"></i> Inventory</a></li>
+            <li><a href="#" onclick="showAnalytics('customers')"><i class="fas fa-user-friends"></i> Customers</a></li>
+          </ul>
+        </aside>
+
+        <div class="admin-content">
+          <div class="crud-form">
+            <h3><i class="fas fa-plus-circle"></i> Add/Edit Product</h3>
+            <form id="crudForm">
+              <div class="form-group">
+                <label for="productName">Product Name</label>
+                <input type="text" id="productName" required>
+              </div>
+              <div class="form-group">
+                <label for="productCategory">Category</label>
+                <select id="productCategory" onchange="updateSpecLabels()" required>
+                  <option value="electronics">Electronics</option>
+                  <option value="fashion">Fashion</option>
+                  <option value="furniture">Furniture</option>
+                  <option value="cosmetics">Cosmetics</option>
+                  <option value="foodAndHealth">Food & Health</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="productPrice">Price ($)</label>
+                <input type="number" id="productPrice" step="0.01" required>
+              </div>
+              <div class="form-group">
+                <label for="productCredit">Credit Value</label>
+                <input type="number" id="productCredit" step="0.01" value="0">
+              </div>
+              <div class="form-group">
+                <label for="productImage">Image URL</label>
+                <input type="url" id="productImage">
+              </div>
+              <div class="form-group">
+                <label for="productId">Product ID</label>
+                <input type="text" id="productId" required>
+              </div>
+              <div class="form-group">
+                <label for="productStock">Stock</label>
+                <input type="number" id="productStock" required>
+              </div>
+              <div class="form-group">
+                <label for="isActive">Status</label>
+                <select id="isActive" required>
+                  <option value="true">Active</option>
+                  <option value="false">Deactive</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label id="spec1Label" for="spec1">Screen Size</label>
+                <input type="text" id="spec1" placeholder="e.g., 6.5 inches">
+              </div>
+              <div class="form-group">
+                <label id="spec2Label" for="spec2">Processor</label>
+                <input type="text" id="spec2" placeholder="e.g., Snapdragon 8 Gen 1">
+              </div>
+              <div class="form-group">
+                <label id="spec3Label" for="spec3">Battery Life</label>
+                <input type="text" id="spec3" placeholder="e.g., 4500 mAh">
+              </div>
+              <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Save Product</button>
+              <button type="button" class="btn-secondary" onclick="clearForm()"><i class="fas fa-times"></i> Clear</button>
+            </form>
+            <p id="crudMessage"></p>
+          </div>
+          <div id="adminProductList" class="product-grid"></div>
+          <!-- Added Pagination -->
+          <div id="adminPagination" class="pagination"></div>
+          <div id="analyticsSection" class="analytics-section" style="display: none;"></div>
+          <div id="usersSection" class="users-section" style="display: none;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="mainFooter">
+    <div class="footer-container">
+      <div class="footer-column">
+        <h4>About ShopSphere</h4>
+        <p>Your one-stop shop for everything!</p>
+      </div>
+      <div class="footer-column">
+        <h4>Quick Links</h4>
+        <p><a href="#" onclick="loadAdminProducts()">Products</a></p>
+        <p><a href="#" onclick="showAnalytics('products')">Analytics</a></p>
+      </div>
+      <div class="footer-column">
+        <h4>Contact Us</h4>
+        <p>Email: support@shopsphere.com</p>
+        <p>Phone: (123) 456-7890</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 ShopSphere. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopSphere - Tech Store</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="mainHeader">
+    <div class="header-container">
+      <h1>ShopSphere</h1>
+      <div class="search-login" id="searchLogin">
+        <input type="text" id="searchBar" placeholder="Search products..." onkeyup="searchProducts(event)">
+        <button onclick="showSection('cart')"><i class="fas fa-shopping-cart"></i> Cart (<span id="cartCount">0</span>)</button>
+      </div>
+      <nav id="mainNav">
+        <a onclick="showSection('home')"><i class="fas fa-home"></i> Home</a>
+        <a onclick="showSection('products')"><i class="fas fa-store"></i> Shop</a>
+        <a onclick="showSection('wishlist')"><i class="fas fa-heart"></i> Wishlist</a>
+        <a id="ordersNav" onclick="showSection('orders')" style="display: none;"><i class="fas fa-history"></i> Orders History</a>
+        <a id="profileNav" onclick="showSection('profile')" style="display: none;">
+          <i class="fas fa-user"></i> 
+          <span id="profileNavDetails">Profile</span>
+        </a>
+        <a id="loginNav" onclick="showSection('login')" style="display: inline-flex;"><i class="fas fa-sign-in-alt"></i> Login</a>
+        <a id="logoutNav" onclick="logout()" style="display: none;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <button class="theme-toggle" onclick="toggleTheme()"><i class="fas fa-moon"></i></button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="page-container" id="pageContainer">
+    <aside class="sidebar" id="sidebar">
+      <h3>Categories</h3>
+      <ul>
+        <li><a href="#" onclick="filterProducts('all')">All</a></li>
+        <li><a href="#" onclick="filterProducts('electronics')">Electronics</a></li>
+        <li><a href="#" onclick="filterProducts('fashion')">Fashion</a></li>
+        <li><a href="#" onclick="filterProducts('furniture')">Furniture</a></li>
+        <li><a href="#" onclick="filterProducts('cosmetics')">Cosmetics</a></li>
+        <li><a href="#" onclick="filterProducts('foodAndHealth')">Food & Health</a></li>
+      </ul>
+    </aside>
+
+    <main>
+      <!-- Modified Home Section with Background Image -->
+      <section id="home" class="section active hero">
+        <h2>INNOVATE YOUR LIFE. <br> PREMIUM ESSENTIALS</h2>
+        <p>Discover cutting-edge gadgets designed for you.</p>
+        <button onclick="showSection('products')">Shop Now</button>
+      </section>
+
+      <section id="login" class="section">
+        <div class="auth-container">
+          <h2><i class="fas fa-sign-in-alt"></i> Login</h2>
+          <p class="auth-toggle">Don't have an account? <a href="#" onclick="toggleRegisterForm()">Sign Up</a></p>
+          <form id="loginForm">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <button type="submit" class="auth-button">Log in</button>
+          </form>
+          <div id="loginMessage" class="message"></div>
+          <!-- <div class="social-login">
+            <p>or</p>
+            <button class="social-button google-button" onclick="continueWithGoogle()"><i class="fab fa-google"></i> Continue with Google</button>
+          </div> -->
+        </div>
+      </section>
+
+      <section id="register" class="section" style="display: none;">
+        <div class="auth-container">
+          <h2><i class="fas fa-user-plus"></i> Sign Up</h2>
+          <p class="auth-toggle">Already have an account? <a href="#" onclick="toggleRegisterForm()">Log In</a></p>
+          <form id="registerForm">
+            <label for="regName">Name</label>
+            <input type="text" id="regName" placeholder="Name" required>
+            <label for="regPhone">Phone</label>
+            <input type="tel" id="regPhone" placeholder="Phone" required>
+            <label for="regEmail">Email</label>
+            <input type="email" id="regEmail" placeholder="Email" required>
+            <label for="regPassword">Password</label>
+            <input type="password" id="regPassword" placeholder="Password" required>
+            <button type="submit" class="auth-button">Sign Up</button>
+          </form>
+          <div id="regMessage" class="message"></div>
+          <!-- <div class="social-login">
+            <p>or</p>
+            <button class="social-button google-button" onclick="continueWithGoogle()"><i class="fab fa-google"></i> Continue with Google</button>
+          </div> -->
+        </div>
+      </section>
+
+      <section id="products" class="section">
+        <div class="content-with-sidebar">
+          <div class="main-content">
+            <h2><i class="fas fa-store"></i> Our Products</h2>
+            <div class="filter-controls">
+              <label for="filterPrice">Price Range: </label>
+              <select id="filterPrice" onchange="applyFilters()">
+                <option value="0-Infinity">All Prices</option>
+                <option value="0-50">$0 - $50</option>
+                <option value="50-100">$50 - $100</option>
+                <option value="100-200">$100 - $200</option>
+                <option value="200-Infinity">$200+</option>
+              </select>
+              <label for="sortBy">Sort By: </label>
+              <select id="sortBy" onchange="applyFilters()">
+                <option value="price-asc">Price: Low to High</option>
+                <option value="price-desc">Price: High to Low</option>
+              </select>
+            </div>
+            <div id="productsList" class="product-grid"></div>
+            <div id="pagination" class="pagination"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="cart" class="section">
+        <h2><i class="fas fa-shopping-cart"></i> Your Cart</h2>
+        <div class="cart-container">
+          <div id="cartList" class="cart-table"></div>
+          <div class="cart-actions">
+            <button onclick="placeOrder()" class="btn-primary"><i class="fas fa-check-circle"></i> Place Order</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="wishlist" class="section">
+        <h2><i class="fas fa-heart"></i> Your Wishlist</h2>
+        <div id="wishlistList" class="wishlist-grid"></div>
+      </section>
+
+      <section id="orders" class="section">
+        <h2><i class="fas fa-history"></i> Orders History</h2>
+        <div class="orders-history">
+          <div id="ordersList"></div>
+        </div>
+      </section>
+
+      <section id="profile" class="section">
+        <h2><i class="fas fa-user"></i> My Profile</h2>
+        <div class="profile-details">
+          <div class="profile-item">
+            <strong>Name:</strong> <span id="profileName">N/A</span>
+          </div>
+          <div class="profile-item">
+            <strong>Email:</strong> <span id="profileEmail">N/A</span>
+          </div>
+          <div class="profile-item">
+            <strong>Phone:</strong> <span id="profilePhone">N/A</span>
+          </div>
+          <div class="profile-item">
+            <strong>Credits:</strong> <span id="profileCredit">0</span>
+          </div>
+          <div class="profile-item">
+            <strong>Registered On:</strong> <span id="profileCreatedAt">N/A</span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="paymentModal" class="modal">
+    <div class="modal-content payment-card">
+      <h2><i class="fas fa-credit-card"></i> Payment</h2>
+      <p>Total Amount: $<span id="paymentAmount"></span></p>
+      <label>Use Credits: <input type="number" id="creditUse" min="0" placeholder="Enter credits to use"></label>
+      <select id="paymentMethod">
+        <option value="credit_card">Credit Card</option>
+        <option value="debit_card">Debit Card</option>
+        <option value="paypal">PayPal</option>
+      </select>
+      <button onclick="processPayment()" class="btn-primary"><i class="fas fa-check"></i> Pay Now</button>
+      <button onclick="closePaymentModal()" class="btn-secondary"><i class="fas fa-times"></i> Cancel</button>
+    </div>
+  </div>
+
+  <footer id="mainFooter">
+    <div class="footer-container">
+      <div class="footer-column">
+        <h4><i class="fas fa-store"></i> Shop:</h4>
+        <p><a href="#" onclick="showSection('products')"><i class="fas fa-box"></i> Products</a></p>
+        <p><a href="#"><i class="fas fa-question-circle"></i> FAQ</a></p>
+        <p><a href="#"><i class="fas fa-truck"></i> Shipping / Pick Up</a></p>
+        <p><a href="#"><i class="fas fa-file-alt"></i> Store Policy</a></p>
+        <p><a href="#"><i class="fas fa-envelope"></i> Contact Me</a></p>
+      </div>
+      <div class="footer-column">
+        <h4><i class="fas fa-map-marker-alt"></i> Address:</h4>
+        <p>500 Terry Francine Street</p>
+        <p>San Francisco, CA 94158</p>
+        <p><i class="fas fa-phone"></i> Tel: 123-456-7890</p>
+      </div>
+      <div class="footer-column">
+        <h4><i class="fas fa-envelope"></i> Get It Fresh:</h4>
+        <input type="email" placeholder="Enter your email here *">
+        <label><input type="checkbox"> Yes, subscribe me to your newsletter.</label>
+        <button class="subscribe-btn"><i class="fas fa-check"></i> Subscribe Now</button>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 ShopSphere. Powered by Firebase.</p>
+      <div class="social-icons">
+        <a href="#"><i class="fab fa-facebook-f"></i></a>
+        <a href="#"><i class="fab fa-twitter"></i></a>
+        <a href="#"><i class="fab fa-youtube"></i></a>
+        <a href="#"><i class="fab fa-instagram"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

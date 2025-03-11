@@ -46,15 +46,13 @@ function toggleTheme() {
 }
 
 function showSection(sectionId) {
-  // Hide all sections by default
   document.querySelectorAll('.section').forEach(sec => {
     sec.classList.remove('active');
-    sec.style.display = 'none'; // Explicitly hide all sections
+    sec.style.display = 'none';
   });
 
-  // Show the selected section
   const activeSection = document.getElementById(sectionId);
-  activeSection.style.display = 'block'; // Show the active section
+  activeSection.style.display = 'block';
   activeSection.classList.add('active');
 
   const header = document.getElementById('mainHeader');
@@ -64,25 +62,24 @@ function showSection(sectionId) {
   const mainNav = document.getElementById('mainNav');
   const pageContainer = document.getElementById('pageContainer');
 
-  // Reset page container background for all sections
   pageContainer.style.background = 'none';
 
   if (sectionId === 'home') {
     header.style.display = 'block';
-    sidebar.style.display = 'none'; // Hide sidebar for home
+    sidebar.style.display = 'none';
     footer.style.display = 'block';
-    searchLogin.style.display = 'none'; // Hide search bar and cart
+    searchLogin.style.display = 'none';
     mainNav.style.display = 'flex';
     updateNavAfterLogin();
   } else if (sectionId === 'login' || sectionId === 'register') {
     header.style.display = 'block';
     sidebar.style.display = 'none';
-    footer.style.display = 'none'; // Hide footer for login/signup
+    footer.style.display = 'none';
     searchLogin.style.display = 'none';
     mainNav.style.display = 'flex';
   } else if (sectionId === 'products') {
     header.style.display = 'block';
-    sidebar.style.display = 'block'; // Show sidebar with categories
+    sidebar.style.display = 'block';
     footer.style.display = 'block';
     searchLogin.style.display = 'flex';
     mainNav.style.display = 'flex';
@@ -97,12 +94,12 @@ function showSection(sectionId) {
     updateNavAfterLogin();
   }
 
-  // Load section-specific content
   if (sectionId === 'cart') { loadCart(); updateCartCount(); }
   if (sectionId === 'wishlist') loadWishlist();
   if (sectionId === 'profile') showProfileDetails();
   if (sectionId === 'orders') loadOrdersHistory();
 }
+
 function updateNavAfterLogin() {
   const loginNav = document.getElementById('loginNav');
   const logoutNav = document.getElementById('logoutNav');
@@ -115,11 +112,21 @@ function updateNavAfterLogin() {
     logoutNav.style.display = 'inline-flex';
     profileNav.style.display = 'inline-flex';
     ordersNav.style.display = 'inline-flex';
-    
+
     db.collection('users').doc(currentUser.uid).get()
-      .then(doc => {
-        const userData = doc.data();
-        profileNavDetails.innerText = `${userData.name || 'User'} (${userData.credit || 0} credits)`;
+      .then((doc) => {
+        if (doc.exists) {
+          const userData = doc.data();
+          profileNavDetails.innerText = `${userData.name || 'User'} (${userData.credit || 0} credits)`;
+        } else {
+          // Handle case where user document doesn't exist (e.g., for admin)
+          profileNavDetails.innerText = `User (${currentUser.credit || 0} credits)`;
+          console.warn(`No user document found for UID: ${currentUser.uid}`);
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching user data:", err);
+        profileNavDetails.innerText = `User (0 credits)`; // Fallback
       });
   } else {
     loginNav.style.display = 'inline-flex';
@@ -137,18 +144,26 @@ function showProfileDetails() {
     return;
   }
   db.collection('users').doc(currentUser.uid).get()
-    .then(doc => {
-      const userData = doc.data();
-      document.getElementById('profileName').innerText = userData.name || 'N/A';
-      document.getElementById('profileEmail').innerText = currentUser.email || 'N/A';
-      document.getElementById('profilePhone').innerText = userData.phone || 'N/A';
-      document.getElementById('profileCredit').innerText = userData.credit || 0;
-      const createdAt = userData.createdAt ? new Date(userData.createdAt.toDate()).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }) : 'N/A';
-      document.getElementById('profileCreatedAt').innerText = createdAt;
+    .then((doc) => {
+      if (doc.exists) {
+        const userData = doc.data();
+        document.getElementById('profileName').innerText = userData.name || 'N/A';
+        document.getElementById('profileEmail').innerText = currentUser.email || 'N/A';
+        document.getElementById('profilePhone').innerText = userData.phone || 'N/A';
+        document.getElementById('profileCredit').innerText = userData.credit || 0;
+        const createdAt = userData.createdAt ? new Date(userData.createdAt.toDate()).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }) : 'N/A';
+        document.getElementById('profileCreatedAt').innerText = createdAt;
+      } else {
+        showMinimalSwal({ icon: 'error', title: 'User profile not found!' });
+      }
+    })
+    .catch((err) => {
+      console.error("Error loading profile:", err);
+      showMinimalSwal({ icon: 'error', title: 'Error loading profile!' });
     });
   showSection('profile');
 }
@@ -162,7 +177,7 @@ function toggleRegisterForm() {
   registerSection.classList.toggle('active');
 }
 
-document.getElementById('registerForm').addEventListener('submit', e => {
+document.getElementById('registerForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const email = document.getElementById('regEmail').value;
   const password = document.getElementById('regPassword').value;
@@ -179,7 +194,7 @@ document.getElementById('registerForm').addEventListener('submit', e => {
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
   auth.createUserWithEmailAndPassword(email, password)
-    .then(cred => {
+    .then((cred) => {
       currentUser = cred.user;
       return db.collection('users').doc(currentUser.uid).set(userData);
     })
@@ -188,30 +203,31 @@ document.getElementById('registerForm').addEventListener('submit', e => {
       showSection('home');
       showMinimalSwal({ icon: 'success', title: 'Registration successful! You have 5 credits.' });
     })
-    .catch(err => {
+    .catch((err) => {
       showMinimalSwal({ icon: 'error', title: err.message });
     });
 });
 
-document.getElementById('loginForm').addEventListener('submit', e => {
+document.getElementById('loginForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
 
   auth.signInWithEmailAndPassword(email, password)
-    .then(cred => {
+    .then((cred) => {
       currentUser = cred.user;
-
       if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
         showMinimalSwal({ icon: 'success', title: 'Admin login successful! Redirecting...' })
-          .then(() => window.location.href = 'admin.html');
+          .then(() => {
+            window.location.href = 'admin.html';
+          });
       } else {
         showMinimalSwal({ icon: 'success', title: 'Login successful!' });
         updateNavAfterLogin();
         showSection('home');
       }
     })
-    .catch(err => {
+    .catch((err) => {
       showMinimalSwal({ icon: 'error', title: err.message });
     });
 });
@@ -219,7 +235,7 @@ document.getElementById('loginForm').addEventListener('submit', e => {
 function continueWithGoogle() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
-    .then(result => {
+    .then((result) => {
       currentUser = result.user;
       const userData = {
         name: result.user.displayName || 'Google User',
@@ -236,7 +252,7 @@ function continueWithGoogle() {
       showSection('home');
       showMinimalSwal({ icon: 'success', title: 'Logged in with Google!' });
     })
-    .catch(err => {
+    .catch((err) => {
       showMinimalSwal({ icon: 'error', title: err.message });
     });
 }
@@ -247,9 +263,13 @@ function updateCartCount() {
     return;
   }
   db.collection('users').doc(currentUser.uid).collection('cart').get()
-    .then(snapshot => {
+    .then((snapshot) => {
       const totalItems = snapshot.docs.reduce((sum, doc) => sum + doc.data().quantity, 0);
       document.getElementById('cartCount').innerText = totalItems;
+    })
+    .catch((err) => {
+      console.error("Error updating cart count:", err);
+      document.getElementById('cartCount').innerText = '0';
     });
 }
 
@@ -286,9 +306,9 @@ function loadProducts(sortBy = 'price-asc') {
     query = query.where('category', '==', currentCategory);
   }
   query.get()
-    .then(snapshot => {
-      let products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(prod => {
+    .then((snapshot) => {
+      let products = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((prod) => {
           const price = prod.price || 0;
           const name = prod.name.toLowerCase();
           return price >= filterPriceRange.min && price <= filterPriceRange.max &&
@@ -306,7 +326,7 @@ function loadProducts(sortBy = 'price-asc') {
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
       const paginatedProducts = products.slice(startIndex, endIndex);
-      paginatedProducts.forEach(prod => {
+      paginatedProducts.forEach((prod) => {
         const productId = prod.id;
         const imageUrl = prod.imageURLs?.[0] || 'https://via.placeholder.com/200';
         const specifications = Array.isArray(prod.specifications) ? prod.specifications.join(', ') : prod.specifications || 'N/A';
@@ -332,7 +352,7 @@ function loadProducts(sortBy = 'price-asc') {
         <button onclick="nextPage()" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>
       `;
     })
-    .catch(err => {
+    .catch((err) => {
       console.error("Error loading products:", err);
       productsListDiv.innerHTML = "Error loading products.";
     });
@@ -361,13 +381,13 @@ function addToCart(productId, name, stock) {
     return;
   }
   db.collection('products').doc(productId).get()
-    .then(doc => {
+    .then((doc) => {
       const prod = doc.data();
       const price = prod.price || 0;
       const imageUrl = prod.imageURLs?.[0] || 'https://via.placeholder.com/200';
       const cartRef = db.collection('users').doc(currentUser.uid).collection('cart');
       cartRef.where('productId', '==', productId).get()
-        .then(snapshot => {
+        .then((snapshot) => {
           if (snapshot.empty) {
             cartRef.add({
               productId: productId,
@@ -392,6 +412,9 @@ function addToCart(productId, name, stock) {
             });
           }
         });
+    })
+    .catch((err) => {
+      showMinimalSwal({ icon: 'error', title: 'Error adding to cart: ' + err.message });
     });
 }
 
@@ -404,12 +427,12 @@ function loadCart() {
   const cartListDiv = document.getElementById('cartList');
   cartListDiv.innerHTML = "";
   db.collection('users').doc(currentUser.uid).collection('cart').get()
-    .then(snapshot => {
+    .then((snapshot) => {
       if (snapshot.empty) {
         cartListDiv.innerHTML = "Your cart is empty.";
         return;
       }
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         const item = doc.data();
         const totalPrice = item.price * item.quantity;
         const itemDiv = document.createElement('div');
@@ -428,6 +451,10 @@ function loadCart() {
         `;
         cartListDiv.appendChild(itemDiv);
       });
+    })
+    .catch((err) => {
+      console.error("Error loading cart:", err);
+      cartListDiv.innerHTML = "Error loading cart.";
     });
 }
 
@@ -453,10 +480,10 @@ function addToWishlist(productId, name) {
     return;
   }
   const wishlistRef = db.collection('wishlist').doc(`${currentUser.uid}_${productId}`);
-  db.collection('products').doc(productId).get().then(prodDoc => {
+  db.collection('products').doc(productId).get().then((prodDoc) => {
     const prod = prodDoc.data();
     const imageUrl = prod.imageURLs?.[0] || 'https://via.placeholder.com/200';
-    wishlistRef.get().then(doc => {
+    wishlistRef.get().then((doc) => {
       if (doc.exists) {
         wishlistRef.update({
           quantity: doc.data().quantity + 1,
@@ -491,9 +518,9 @@ function loadWishlist() {
   const wishlistListDiv = document.getElementById('wishlistList');
   wishlistListDiv.innerHTML = "";
   db.collection('wishlist').where("userId", "==", currentUser.uid).get()
-    .then(snapshot => {
+    .then((snapshot) => {
       if (snapshot.empty) wishlistListDiv.innerHTML = "Your wishlist is empty.";
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         const item = doc.data();
         const itemDiv = document.createElement('div');
         itemDiv.classList.add('wishlist-item');
@@ -503,6 +530,10 @@ function loadWishlist() {
         `;
         wishlistListDiv.appendChild(itemDiv);
       });
+    })
+    .catch((err) => {
+      console.error("Error loading wishlist:", err);
+      wishlistListDiv.innerHTML = "Error loading wishlist.";
     });
 }
 
@@ -515,19 +546,19 @@ function loadOrdersHistory() {
   const ordersListDiv = document.getElementById('ordersList');
   ordersListDiv.innerHTML = "Loading orders...";
   db.collection('orders').where('userId', '==', currentUser.uid).get()
-    .then(snapshot => {
+    .then((snapshot) => {
       ordersListDiv.innerHTML = '';
       if (snapshot.empty) {
         ordersListDiv.innerHTML = "No orders found.";
         return;
       }
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         const order = doc.data();
         const orderDiv = document.createElement('div');
         orderDiv.classList.add('order-item');
         const uniqueItems = [];
-        order.items.forEach(item => {
-          if (!uniqueItems.some(i => i.productId === item.productId)) {
+        order.items.forEach((item) => {
+          if (!uniqueItems.some((i) => i.productId === item.productId)) {
             uniqueItems.push(item);
           }
         });
@@ -535,7 +566,7 @@ function loadOrdersHistory() {
           <strong>Order ID: ${doc.id}</strong>
           <p>Total Amount: $${order.totalAmount}</p>
           <p>Status: ${order.status}</p>
-          ${uniqueItems.map(item => `
+          ${uniqueItems.map((item) => `
             <div style="display: flex; align-items: center; margin: 5px 0;">
               <img src="${item.imageUrl || 'https://via.placeholder.com/200'}" alt="${item.name}" width="80" onerror="this.src='https://via.placeholder.com/200'">
               <span style="margin-left: 10px;">${item.name} x${item.quantity}</span>
@@ -544,6 +575,10 @@ function loadOrdersHistory() {
         `;
         ordersListDiv.appendChild(orderDiv);
       });
+    })
+    .catch((err) => {
+      console.error("Error loading orders:", err);
+      ordersListDiv.innerHTML = "Error loading orders.";
     });
 }
 
@@ -554,17 +589,17 @@ function placeOrder() {
     return;
   }
   const userCartRef = db.collection('users').doc(currentUser.uid).collection('cart');
-  userCartRef.get().then(snapshot => {
+  userCartRef.get().then((snapshot) => {
     if (snapshot.empty) {
       showMinimalSwal({ icon: 'info', title: 'Your cart is empty!' });
       return;
     }
     let cartItems = [];
-    snapshot.forEach(doc => cartItems.push({ id: doc.id, ...doc.data() }));
-    
-    const stockPromises = cartItems.map(item =>
+    snapshot.forEach((doc) => cartItems.push({ id: doc.id, ...doc.data() }));
+
+    const stockPromises = cartItems.map((item) =>
       db.collection('products').doc(item.productId).get()
-        .then(prodDoc => {
+        .then((prodDoc) => {
           const prod = prodDoc.data();
           if (!prod || typeof prod.stock === 'undefined') {
             console.error(`Product data missing or invalid for ${item.productId}`);
@@ -573,15 +608,15 @@ function placeOrder() {
           return { item, prod, prodDoc };
         })
     );
-    
+
     Promise.all(stockPromises)
-      .then(results => {
+      .then((results) => {
         const validItems = results.filter(({ item, prod }) => prod.stock >= item.quantity);
         if (validItems.length === 0) {
           showMinimalSwal({ icon: 'error', title: 'No items with sufficient stock in your cart!' });
           return;
         }
-        
+
         const variants = validItems.map(({ item }) => ({
           productId: item.productId,
           quantity: item.quantity,
@@ -590,10 +625,10 @@ function placeOrder() {
           imageUrl: item.imageUrl,
           credit: item.credit || 0
         }));
-        
+
         let totalAmount = variants.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-        
-        db.collection('users').doc(currentUser.uid).get().then(doc => {
+
+        db.collection('users').doc(currentUser.uid).get().then((doc) => {
           const userCredit = doc.data().credit || 0;
           Swal.fire({
             title: `You have ${userCredit} credits. Apply them?`,
@@ -607,7 +642,7 @@ function placeOrder() {
               creditsToUse = Math.min(userCredit, totalAmount);
               totalAmount = Math.max(0, totalAmount - creditsToUse);
             }
-            
+
             return db.collection('orders').add({
               userId: currentUser.uid,
               items: variants,
@@ -616,13 +651,13 @@ function placeOrder() {
               status: 'pending',
               paymentStatus: 'pending',
               orderDate: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(orderRef => {
-              currentOrder = { 
-                id: orderRef.id, 
-                totalAmount, 
+            }).then((orderRef) => {
+              currentOrder = {
+                id: orderRef.id,
+                totalAmount,
                 creditsUsed: creditsToUse,
-                cartItems: snapshot.docs, 
-                results: validItems 
+                cartItems: snapshot.docs,
+                results: validItems
               };
               document.getElementById('paymentAmount').innerText = totalAmount;
               document.getElementById('creditUse').value = creditsToUse;
@@ -631,7 +666,7 @@ function placeOrder() {
           });
         });
       })
-      .catch(err => {
+      .catch((err) => {
         showMinimalSwal({ icon: 'error', title: err.message });
       });
   });
@@ -641,8 +676,8 @@ function processPayment() {
   if (!currentOrder || !currentUser) return;
   const paymentMethod = document.getElementById('paymentMethod').value;
   const creditsToUse = parseInt(document.getElementById('creditUse').value) || 0;
-  
-  db.collection('users').doc(currentUser.uid).get().then(doc => {
+
+  db.collection('users').doc(currentUser.uid).get().then((doc) => {
     const userCredit = doc.data().credit || 0;
     const maxCredits = Math.min(creditsToUse, userCredit, currentOrder.totalAmount);
     const finalAmount = Math.max(0, currentOrder.totalAmount - maxCredits);
@@ -728,7 +763,7 @@ function generateInvoice(finalAmount, creditsUsed, paymentMethod, transactionId)
           <p>Transaction ID: ${transactionId}</p>
         </div>
         <div class="items-list">
-          ${items.map(item => `
+          ${items.map((item) => `
             <div class="item">
               <span><strong>Item:</strong> ${item.name}</span>
               <span><strong>Quantity:</strong> ${item.quantity}</span>
@@ -768,6 +803,9 @@ function logout() {
     showMinimalSwal({ icon: 'success', title: 'Logged out successfully.' });
     updateNavAfterLogin();
     showSection('home');
+  }).catch((err) => {
+    console.error("Error during logout:", err);
+    showMinimalSwal({ icon: 'error', title: 'Error logging out!' });
   });
 }
 
@@ -788,7 +826,7 @@ document.querySelector('.subscribe-btn').addEventListener('click', () => {
     }).then(() => {
       showMinimalSwal({ icon: 'success', title: 'Subscribed successfully!' });
       emailInput.value = '';
-    }).catch(err => {
+    }).catch((err) => {
       showMinimalSwal({ icon: 'error', title: 'Error: ' + err.message });
     });
   } else {
@@ -797,7 +835,7 @@ document.querySelector('.subscribe-btn').addEventListener('click', () => {
   }
 });
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged((user) => {
   currentUser = user;
   updateNavAfterLogin();
   updateCartCount();
